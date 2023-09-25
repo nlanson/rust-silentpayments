@@ -5,8 +5,11 @@ use std::{
 
 use crate::{Error, Result, common::{calculate_t_n, calculate_P_n}};
 use bimap::BiMap;
-use bitcoin::secp256k1::{Parity, PublicKey, Scalar, Secp256k1, SecretKey, XOnlyPublicKey};
-use bitcoin::bech32::ToBase32;
+use bitcoin::{
+    Script, ScriptBuf,
+    secp256k1::{Parity, PublicKey, Scalar, Secp256k1, SecretKey, XOnlyPublicKey},
+    bech32::{u5, ToBase32, encode, Variant}
+};
 
 pub const NULL_LABEL: Label = Label { s: Scalar::ZERO };
 
@@ -190,7 +193,7 @@ impl Receiver {
         ecdh_shared_secret: &PublicKey,
         pubkeys_to_check: Vec<XOnlyPublicKey>,
     ) -> Result<HashMap<Label, HashMap<XOnlyPublicKey, Scalar>>> {
-        let secp = bitcoin::secp256k1::Secp256k1::new();
+        let secp = Secp256k1::new();
 
         let mut found: HashMap<Label, HashMap<XOnlyPublicKey, Scalar>> = HashMap::new();
         let mut n_found: u32 = 0;
@@ -292,18 +295,15 @@ impl Receiver {
     pub fn get_script_bytes_from_shared_secret(
         &self,
         ecdh_shared_secret: &PublicKey,
-    ) -> Result<[u8; 34]> {
+    ) -> Result<ScriptBuf> {
         let t_n: SecretKey = calculate_t_n(&ecdh_shared_secret.serialize(), 0)?;
         let P_n: PublicKey = calculate_P_n(&self.spend_pubkey, t_n.into())?;
-        let output_key_bytes = P_n.x_only_public_key().0.serialize();
 
-        // hardcoded opcode values for OP_PUSHNUM_1 and OP_PUSHBYTES_32
-        let mut result = [0u8; 34];
-        result[..2].copy_from_slice(&[0x51, 0x20]);
-
-        result[2..].copy_from_slice(&output_key_bytes);
-
-        Ok(result)
+        let mut builder = Script::builder();
+        builder = builder.push_int(0x51);
+        builder = builder.push_int(0x20);
+        builder = builder.push_x_only_key(&P_n.x_only_public_key().0);
+        Ok(builder.into_script())
     }
 
     fn encode_silent_payment_address(&self, m_pubkey: PublicKey) -> String {
@@ -312,7 +312,7 @@ impl Receiver {
             true => "tsp",
         };
 
-        let version = bitcoin::bech32::u5::try_from_u8(self.version).unwrap();
+        let version = u5::try_from_u8(self.version).unwrap();
 
         let B_scan_bytes = self.scan_pubkey.serialize();
         let B_m_bytes = m_pubkey.serialize();
@@ -321,7 +321,7 @@ impl Receiver {
 
         data.insert(0, version);
 
-        bitcoin::bech32::encode(hrp, data, bitcoin::bech32::Variant::Bech32m).unwrap()
+        encode(hrp, data, Variant::Bech32m).unwrap()
     }
 }
 
