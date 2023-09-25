@@ -1,6 +1,7 @@
-use bech32::{FromBase32, ToBase32};
-
-use secp256k1::{PublicKey, Secp256k1, SecretKey, XOnlyPublicKey};
+use bitcoin::{
+    secp256k1::{PublicKey, Secp256k1, SecretKey, XOnlyPublicKey},
+    bech32::{FromBase32, ToBase32}
+};
 use std::collections::HashMap;
 
 use crate::{
@@ -42,7 +43,7 @@ impl TryFrom<&str> for SilentPaymentAddress {
     type Error = Error;
 
     fn try_from(addr: &str) -> Result<Self> {
-        let (hrp, data, _variant) = bech32::decode(&addr)?;
+        let (hrp, data, _variant) = bitcoin::bech32::decode(&addr)?;
 
         if data.len() != 107 {
             return Err(Error::GenericError("Address length is wrong".to_owned()));
@@ -85,7 +86,7 @@ impl Into<String> for SilentPaymentAddress {
             false => "sp",
         };
 
-        let version = bech32::u5::try_from_u8(self.version).unwrap();
+        let version = bitcoin::bech32::u5::try_from_u8(self.version).unwrap();
 
         let B_scan_bytes = self.scan_pubkey.serialize();
         let B_m_bytes = self.m_pubkey.serialize();
@@ -94,7 +95,7 @@ impl Into<String> for SilentPaymentAddress {
 
         data.insert(0, version);
 
-        bech32::encode(hrp, data, bech32::Variant::Bech32m).unwrap()
+        bitcoin::bech32::encode(hrp, data, bitcoin::bech32::Variant::Bech32m).unwrap()
     }
 }
 

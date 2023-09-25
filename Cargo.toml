@@ -20,9 +20,8 @@ sending = []
 receiving = []
 
 [dependencies]
-secp256k1 = {version = "0.24", features = ["bitcoin-hashes-std"] }
+bitcoin = "0.30.1"
 hex = "0.4"
-bech32 = "0.9"
 bimap = "0.6"
 
 [dev-dependencies]

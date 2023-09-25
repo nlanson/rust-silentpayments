@@ -4,9 +4,9 @@ use std::{
 };
 
 use crate::{Error, Result, common::{calculate_t_n, calculate_P_n}};
-use bech32::ToBase32;
 use bimap::BiMap;
-use secp256k1::{Parity, PublicKey, Scalar, Secp256k1, SecretKey, XOnlyPublicKey};
+use bitcoin::secp256k1::{Parity, PublicKey, Scalar, Secp256k1, SecretKey, XOnlyPublicKey};
+use bitcoin::bech32::ToBase32;
 
 pub const NULL_LABEL: Label = Label { s: Scalar::ZERO };
 
@@ -190,7 +190,7 @@ impl Receiver {
         ecdh_shared_secret: &PublicKey,
         pubkeys_to_check: Vec<XOnlyPublicKey>,
     ) -> Result<HashMap<Label, HashMap<XOnlyPublicKey, Scalar>>> {
-        let secp = secp256k1::Secp256k1::new();
+        let secp = bitcoin::secp256k1::Secp256k1::new();
 
         let mut found: HashMap<Label, HashMap<XOnlyPublicKey, Scalar>> = HashMap::new();
         let mut n_found: u32 = 0;
@@ -312,7 +312,7 @@ impl Receiver {
             true => "tsp",
         };
 
-        let version = bech32::u5::try_from_u8(self.version).unwrap();
+        let version = bitcoin::bech32::u5::try_from_u8(self.version).unwrap();
 
         let B_scan_bytes = self.scan_pubkey.serialize();
         let B_m_bytes = m_pubkey.serialize();
@@ -321,7 +321,7 @@ impl Receiver {
 
         data.insert(0, version);
 
-        bech32::encode(hrp, data, bech32::Variant::Bech32m).unwrap()
+        bitcoin::bech32::encode(hrp, data, bitcoin::bech32::Variant::Bech32m).unwrap()
     }
 }
 

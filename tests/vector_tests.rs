@@ -8,7 +8,7 @@ mod tests {
         str::FromStr,
     };
 
-    use secp256k1::{Secp256k1, SecretKey, Scalar};
+    use bitcoin::secp256k1::{Secp256k1, SecretKey, Scalar};
 
     #[cfg(feature = "receiving")]
     use silentpayments::receiving::Receiver;

@@ -5,9 +5,9 @@ use std::{
     str::FromStr,
 };
 
-use secp256k1::{
+use bitcoin::{
     hashes::{sha256, Hash},
-    Message, PublicKey, Scalar, SecretKey, XOnlyPublicKey,
+    secp256k1::{Message, PublicKey, Scalar, SecretKey, XOnlyPublicKey}
 };
 use serde_json::from_str;
 
@@ -51,7 +51,7 @@ pub fn decode_input_pub_keys(input_pub_keys: &Vec<String>) -> Vec<PublicKey> {
             Err(_) => {
                 // we always assume even pairing for input public keys if they are omitted
                 let x_only_public_key = XOnlyPublicKey::from_str(&x).unwrap();
-                PublicKey::from_x_only_public_key(x_only_public_key, secp256k1::Parity::Even)
+                PublicKey::from_x_only_public_key(x_only_public_key, bitcoin::secp256k1::Parity::Even)
             }
         })
         .collect()
@@ -72,14 +72,14 @@ pub fn decode_recipients(recipients: &Vec<(String, f32)>) -> Vec<String> {
 }
 
 pub fn get_a_sum_secret_keys(input: &Vec<(SecretKey, bool)>) -> SecretKey {
-    let secp = secp256k1::Secp256k1::new();
+    let secp = bitcoin::secp256k1::Secp256k1::new();
 
     let mut negated_keys: Vec<SecretKey> = vec![];
 
     for (key, is_xonly) in input {
         let (_, parity) = key.x_only_public_key(&secp);
 
-        if *is_xonly && parity == secp256k1::Parity::Odd {
+        if *is_xonly && parity == bitcoin::secp256k1::Parity::Odd {
             negated_keys.push(key.negate());
         } else {
             negated_keys.push(key.clone());
@@ -105,7 +105,7 @@ pub fn calculate_tweak_data_for_recipient(
     input_pub_keys: &Vec<PublicKey>,
     outpoints: &HashSet<([u8; 32], u32)>,
 ) -> PublicKey {
-    let secp = secp256k1::Secp256k1::new();
+    let secp = bitcoin::secp256k1::Secp256k1::new();
     let A_sum = get_A_sum_public_keys(input_pub_keys);
     let outpoints_hash = hash_outpoints(outpoints);
 
@@ -117,7 +117,7 @@ pub fn sender_calculate_partial_secret(a_sum: SecretKey, outpoints_hash: Scalar)
 }
 
 pub fn receiver_calculate_shared_secret(tweak_data: PublicKey, b_scan: SecretKey) -> PublicKey {
-    let secp = secp256k1::Secp256k1::new();
+    let secp = bitcoin::secp256k1::Secp256k1::new();
 
     tweak_data.mul_tweak(&secp, &b_scan.into()).unwrap()
 }
@@ -143,17 +143,17 @@ pub fn hash_outpoints(sending_data: &HashSet<([u8; 32], u32)>) -> Scalar {
         engine.write_all(&v).unwrap();
     }
 
-    Scalar::from_be_bytes(sha256::Hash::from_engine(engine).into_inner()).unwrap()
+    Scalar::from_be_bytes(sha256::Hash::from_engine(engine).to_byte_array()).unwrap()
 }
 
 pub fn verify_and_calculate_signatures(
     key_tweaks: Vec<Scalar>,
     b_spend: SecretKey,
-) -> Result<Vec<OutputWithSignature>, secp256k1::Error> {
-    let secp = secp256k1::Secp256k1::new();
+) -> Result<Vec<OutputWithSignature>, bitcoin::secp256k1::Error> {
+    let secp = bitcoin::secp256k1::Secp256k1::new();
 
-    let msg = Message::from_hashed_data::<secp256k1::hashes::sha256::Hash>(b"message");
-    let aux = secp256k1::hashes::sha256::Hash::hash(b"random auxiliary data").into_inner();
+    let msg = Message::from_hashed_data::<bitcoin::secp256k1::hashes::sha256::Hash>(b"message");
+    let aux = bitcoin::secp256k1::hashes::sha256::Hash::hash(b"random auxiliary data").to_byte_array();
 
     let mut res: Vec<OutputWithSignature> = vec![];
     for tweak in key_tweaks {

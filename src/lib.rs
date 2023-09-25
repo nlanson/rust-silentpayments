@@ -7,6 +7,8 @@ pub mod receiving;
 #[cfg(feature = "sending")]
 pub mod sending;
 
+pub use bitcoin;
+
 pub use crate::error::Error;
 
 pub type Result<T> = std::result::Result<T, Error>;
